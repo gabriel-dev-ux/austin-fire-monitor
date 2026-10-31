@@ -1,0 +1,121 @@
+name: Breaking Bot / Austin Fire and News
+
+on:
+  schedule:
+    - cron: '0 * * * *' # hourly backstop; loop.sh polls every five minutes
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Check feeds, seed a silent baseline, or run alerts
+        type: choice
+        options: [check, baseline, monitor]
+        default: check
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  check:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'check'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - run: python3 -m unittest discover -v
+      - name: Verify live feeds without Slack or state writes
+        run: python3 fire_monitor.py --dry-run --check-sources
+
+  baseline:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'baseline'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: austin-fire-monitor
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Seed current sources without sending alerts
+        run: python3 fire_monitor.py --seed-only
+      - name: Save baseline
+        run: |
+          if ! git diff --quiet -- state.json; then
+            git config user.name 'github-actions[bot]'
+            git config user.email 'github-actions[bot]@users.noreply.github.com'
+            git add state.json
+            git commit -m 'Seed restored monitor baseline [skip ci]'
+            git push
+          fi
+
+  backstop:
+    if: vars.MONITOR_ENABLED == 'true' && (github.event_name == 'schedule' || inputs.mode == 'monitor')
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.gate.outputs.should_run }}
+    steps:
+      - name: Check whether the monitor is already active
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          # A chained or manual dispatch should enter the monitor queue. An
+          # hourly backstop should finish successfully when another run is
+          # already active instead of sitting pending until GitHub cancels it.
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if ! runs=$(gh api \
+            "/repos/$GITHUB_REPOSITORY/actions/workflows/monitor.yml/runs?per_page=100"); then
+            echo "GitHub API unavailable; leaving the active monitor undisturbed"
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          other_active=$(printf '%s' "$runs" | jq -r \
+            --argjson current "$GITHUB_RUN_ID" \
+            '.workflow_runs[] | select((.status == "in_progress" or .status == "queued") and .id != $current) | .id' \
+            | head -n 1)
+          if [ -n "$other_active" ]; then
+            echo "Monitor run $other_active is already active; backstop is healthy"
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "No active monitor found; backstop will start one"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  monitor:
+    needs: backstop
+    if: needs.backstop.outputs.should_run == 'true'
+    concurrency:
+      group: austin-fire-monitor
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      - name: Check required Slack configuration
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_USER_IDS: ${{ secrets.SLACK_USER_IDS }}
+        run: python3 -c 'import os,sys; ok=os.environ.get("SLACK_BOT_TOKEN","").startswith("xoxb-") and bool(os.environ.get("SLACK_USER_IDS","").strip()); print("Slack configuration present" if ok else "Configure SLACK_BOT_TOKEN and SLACK_USER_IDS before activation"); sys.exit(0 if ok else 2)'
+      - name: Poll every five minutes and chain the next run
+        env:
+          # Each secret mapped by name. Never toJSON(secrets): dumping the whole
+          # secret set into one env var is the standard exfiltration pattern and
+          # trips GitHub's malicious-workflow heuristic, which blocks the run.
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_USER_IDS: ${{ secrets.SLACK_USER_IDS }}
+          GH_TOKEN: ${{ github.token }}
+        run: bash loop.sh

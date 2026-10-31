@@ -1,0 +1,14 @@
+{
+  "fire_api": "https://datahub.austintexas.gov/resource/wpu4-x69d.json",
+  "fire_page": "https://data.austintexas.gov/stories/s/dr26-vqib",
+  "reddit_feed": "https://www.reddit.com/r/Austin/new/.rss",
+  "news_query": "(Austin OR \"Travis County\" OR \"Round Rock\" OR Pflugerville OR \"Cedar Park\" OR \"San Marcos\") (shooting OR stabbing OR homicide OR fire OR explosion OR evacuation OR \"fatal crash\" OR \"water rescue\" OR flooding OR tornado OR hazmat) when:1d",
+  "local_terms": ["Austin", "Travis County", "Round Rock", "Williamson County", "Pflugerville", "Cedar Park", "Leander", "Georgetown", "Hays County", "Bastrop", "Kyle", "Buda", "San Marcos"],
+  "publisher_domains": ["kut.org", "kxan.com", "kvue.com", "fox7austin.com", "cbsaustin.com", "statesman.com", "spectrumlocalnews.com", "communityimpact.com", "texastribune.org", "apnews.com", "reuters.com"],
+  "fire_patterns": ["^BOX", "^BRUSH\\b", "^BRSHL\\b", "^HMTF\\b", "^HMI\\b", "^HMCLAN\\b", "^ALERT[23]", "^RESQ[VCT]\\b", "^WRESQT\\b", "^ATTACK\\b", "^FLOOD[AB]\\b", "^Traffic Injury Pri [14]F?\\b"],
+  "signal_pattern": "\\b(shooting|shot dead|shots fired|gunshots|stabbing|homicide|murder|structure fire|building fire|house fire|apartment fire|brush fire|wildfire|explosion|evacuat(?:e|ed|ion|ions)|fatal (?:crash|collision)|deadly (?:crash|collision)|hazmat|gas leak|water rescue|flash flood(?:ing)?|tornado|active shooter|active attack|amber alert|boil water|shelter.in.place|train derailment)\\b",
+  "exclude_pattern": "\\b(movie|film set|filming|video game|fundraiser|anniversary|years? ago|historical|history of|job opening|hiring|training exercise|scheduled drill)\\b",
+  "max_age_hours": 6,
+  "fire_max_age_hours": 48,
+  "state_retention_days": 14
+}
