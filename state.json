@@ -1474,17 +1474,17 @@
   "sources": {
     "fire": {
       "initialized": true,
-      "last_success": "2026-11-10T08:57:55.771990+00:00",
+      "last_success": "2026-11-10T09:28:07.001734+00:00",
       "records": 0
     },
     "news": {
       "initialized": true,
-      "last_success": "2026-11-10T08:57:55.771990+00:00",
+      "last_success": "2026-11-10T09:28:07.001734+00:00",
       "records": 53
     },
     "reddit": {
       "initialized": true,
-      "last_success": "2026-11-10T08:57:55.771990+00:00",
+      "last_success": "2026-11-10T09:28:07.001734+00:00",
       "records": 25
     }
   },
