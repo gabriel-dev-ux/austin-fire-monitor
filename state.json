@@ -2006,12 +2006,12 @@
   "sources": {
     "fire": {
       "initialized": true,
-      "last_success": "2026-11-24T05:00:53.053655+00:00",
-      "records": 6
+      "last_success": "2026-11-24T05:31:05.757661+00:00",
+      "records": 3
     },
     "news": {
       "initialized": true,
-      "last_success": "2026-11-24T05:00:53.053655+00:00",
+      "last_success": "2026-11-24T05:31:05.757661+00:00",
       "records": 100
     },
     "reddit": {
